@@ -7,23 +7,31 @@ const BUBBLE_FONT = '900 34px "Comic Sans MS", "Comic Neue", "Bradley Hand", cur
 const BUBBLE_OUTSIDE_RATIO = 0.4;
 const TAIL_POSITIONS = ["left", "left-top", "right-top", "right", "right-bottom", "left-bottom"];
 const DEFAULT_TAIL_POSITION = "right-bottom";
+const STORAGE_KEY = "pegacomic:bubbles:v1";
+
+function createEmptyPanel() {
+  return {
+    image: null,
+    bubbles: [],
+  };
+}
 
 const state = {
   selectedPanelId: 0,
   selectedBubbleId: null,
-  panels: Array.from({ length: PANEL_COUNT }, () => ({
-    image: null,
-    bubbles: [],
-  })),
+  panels: Array.from({ length: PANEL_COUNT }, createEmptyPanel),
 };
 
 const comicPage = document.querySelector("#comicPage");
 const uploadButton = document.querySelector("#uploadButton");
 const bubbleButton = document.querySelector("#bubbleButton");
 const exportButton = document.querySelector("#exportButton");
+const clearButton = document.querySelector("#clearButton");
 const deleteBubbleButton = document.querySelector("#deleteBubbleButton");
 const imageInput = document.querySelector("#imageInput");
 const selectionHint = document.querySelector("#selectionHint");
+
+loadStoredBubbles();
 
 function render() {
   comicPage.innerHTML = "";
@@ -45,10 +53,14 @@ function render() {
     }
 
     if (panel.image) {
+      const imageFrame = document.createElement("div");
+      imageFrame.className = "panel-image-frame";
+
       const image = document.createElement("img");
       image.src = panel.image;
       image.alt = "";
-      panelElement.append(image);
+      imageFrame.append(image);
+      panelElement.append(imageFrame);
     } else {
       const emptyPanel = document.createElement("span");
       emptyPanel.className = "empty-panel";
@@ -235,6 +247,7 @@ function updateBubbleText(bubbleId, text) {
   }
 
   bubble.text = text;
+  saveBubbles();
 }
 
 function cycleBubbleTail(bubbleId) {
@@ -246,6 +259,7 @@ function cycleBubbleTail(bubbleId) {
   const currentIndex = TAIL_POSITIONS.indexOf(bubble.tailPosition || DEFAULT_TAIL_POSITION);
   const nextIndex = (currentIndex + 1) % TAIL_POSITIONS.length;
   bubble.tailPosition = TAIL_POSITIONS[nextIndex];
+  saveBubbles();
   render();
 }
 
@@ -291,6 +305,7 @@ function addBubble() {
 
   panel.bubbles.push(bubble);
   state.selectedBubbleId = bubble.id;
+  saveBubbles();
   render();
 }
 
@@ -304,6 +319,20 @@ function deleteSelectedBubble() {
   });
 
   state.selectedBubbleId = null;
+  saveBubbles();
+  render();
+}
+
+function clearComic() {
+  const shouldClear = window.confirm("Lose everything and reset the comic? This cannot be undone.");
+  if (!shouldClear) {
+    return;
+  }
+
+  state.selectedPanelId = 0;
+  state.selectedBubbleId = null;
+  state.panels = Array.from({ length: PANEL_COUNT }, createEmptyPanel);
+  localStorage.removeItem(STORAGE_KEY);
   render();
 }
 
@@ -348,6 +377,7 @@ function startBubbleDrag(event, bubbleElement, panelIndex, bubbleId) {
     bubbleElement.removeEventListener("pointermove", moveBubble);
     bubbleElement.removeEventListener("pointerup", stopDragging);
     bubbleElement.removeEventListener("pointercancel", stopDragging);
+    saveBubbles();
   };
 
   bubbleElement.addEventListener("pointermove", moveBubble);
@@ -365,6 +395,57 @@ function createId() {
   }
 
   return `bubble-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function saveBubbles() {
+  const savedPanels = state.panels.map((panel) => ({
+    bubbles: panel.bubbles.map((bubble) => ({
+      id: bubble.id,
+      text: bubble.text,
+      x: bubble.x,
+      y: bubble.y,
+      width: bubble.width,
+      tailPosition: bubble.tailPosition || DEFAULT_TAIL_POSITION,
+    })),
+  }));
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ panels: savedPanels }));
+}
+
+function loadStoredBubbles() {
+  const rawValue = localStorage.getItem(STORAGE_KEY);
+  if (!rawValue) {
+    return;
+  }
+
+  const savedState = JSON.parse(rawValue);
+  if (!Array.isArray(savedState.panels)) {
+    throw new Error("Stored comic data is invalid.");
+  }
+
+  savedState.panels.slice(0, PANEL_COUNT).forEach((savedPanel, panelIndex) => {
+    if (!Array.isArray(savedPanel?.bubbles)) {
+      return;
+    }
+
+    state.panels[panelIndex].bubbles = savedPanel.bubbles.map(normalizeStoredBubble);
+  });
+}
+
+function normalizeStoredBubble(bubble) {
+  const storedBubble = bubble && typeof bubble === "object" ? bubble : {};
+  const tailPosition = TAIL_POSITIONS.includes(storedBubble.tailPosition)
+    ? storedBubble.tailPosition
+    : DEFAULT_TAIL_POSITION;
+
+  return {
+    id: typeof storedBubble.id === "string" ? storedBubble.id : createId(),
+    text: typeof storedBubble.text === "string" ? storedBubble.text : "",
+    x: Number.isFinite(storedBubble.x) ? storedBubble.x : 22,
+    y: Number.isFinite(storedBubble.y) ? storedBubble.y : 18,
+    width: Number.isFinite(storedBubble.width) ? storedBubble.width : 54,
+    tailPosition,
+  };
 }
 
 function selectText(element) {
@@ -660,6 +741,7 @@ function wait(milliseconds) {
 uploadButton.addEventListener("click", openImagePicker);
 bubbleButton.addEventListener("click", addBubble);
 deleteBubbleButton.addEventListener("click", deleteSelectedBubble);
+clearButton.addEventListener("click", clearComic);
 exportButton.addEventListener("click", async () => {
   exportButton.disabled = true;
   exportButton.classList.remove("is-exported", "is-export-failed");

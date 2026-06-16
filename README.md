@@ -1,15 +1,24 @@
 # Pega Comic
 
-A visual comic-page builder for placing uploaded pictures in a 3 column x 4 row grid,
-adding draggable text bubbles, and exporting the composed page as a PNG.
+![Pega Comic logo](assets/pegacomic-title.jpg)
 
-## Run locally
+A small static web app to build comic pages from pictures: place images in a 3 x 4 grid, add speech bubbles, and export the composed page.
 
-Open `index.html` directly in a browser. The app is fully client-side: there is no
-server, build step, or package install.
+Built for **OpenSouthKids 2026**, held during **OpenSouthCode** in Malaga, Spain.
 
-## Publish to GitHub Pages
+## Use
 
-The included GitHub Actions workflow deploys the static site when changes are pushed
-to `main`. In the repository settings, set Pages to use **GitHub Actions** as the
-source.
+Open `index.html` locally, or visit https://pablonete.github.io/pegacomic/.
+
+## First version
+
+<details>
+<summary>Screenshot</summary>
+
+![First version of Pega Comic](assets/first-version.png)
+
+</details>
+
+## License
+
+MIT

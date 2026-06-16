@@ -9,8 +9,6 @@
   <body>
     <main class="app-shell">
       <section class="hero-panel" aria-labelledby="app-title">
-        <button id="exportButton" class="export-action" type="button">Export</button>
-
         <div class="title-area">
           <h1 id="app-title" class="app-title">
             <img src="assets/pegacomic-title.jpg" alt="PegaComic">
@@ -19,9 +17,11 @@
 
         <div class="quick-actions" aria-label="Comic actions">
           <h2 id="selectionHint" class="toolbar-heading">Editing panel 1</h2>
-          <button id="uploadButton" class="primary-action" type="button">Add picture</button>
-          <button id="bubbleButton" type="button">Add text bubble</button>
-          <button id="deleteBubbleButton" class="danger" type="button" hidden>Delete bubble</button>
+          <button id="uploadButton" class="primary-action" type="button">+ Picture</button>
+          <button id="bubbleButton" type="button">+ Bubble</button>
+          <button id="deleteBubbleButton" class="danger" type="button" hidden>Delete</button>
+          <button id="clearButton" type="button">Clear</button>
+          <button id="exportButton" class="export-action" type="button">Export</button>
         </div>
       </section>
 
@@ -30,6 +30,16 @@
           <div id="comicPage" class="comic-page" aria-label="Comic page"></div>
         </div>
       </section>
+
+      <footer class="app-footer">
+        Made with love by
+        <a href="https://github.com/pablonete" target="_blank" rel="noreferrer">@pablonete</a>
+        for the
+        <a href="https://github.com/opensouthcode/2026/issues/46" target="_blank" rel="noreferrer">OpenSouthKids 2026</a>
+        <a class="qr-link" href="https://pablonete.github.io/pegacomic/" aria-label="Open Pega Comic website">
+          <img src="assets/pegacomic-qr.png" alt="QR code for the Pega Comic website">
+        </a>
+      </footer>
     </main>
 
     <input id="imageInput" type="file" accept="image/*" hidden>
