@@ -155,13 +155,19 @@ button:active {
 
 .app-footer {
   display: grid;
-  justify-items: center;
-  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
   margin-top: 24px;
   color: var(--muted);
   font-size: 0.95rem;
   font-weight: 800;
-  text-align: center;
+  text-align: left;
+}
+
+.app-footer p {
+  margin: 0;
 }
 
 .app-footer a {
@@ -178,15 +184,88 @@ button:active {
   display: block;
   width: 112px;
   height: 112px;
+}
+
+.new-comic-dialog {
+  width: min(92vw, 520px);
+  padding: 0;
+  border: 4px solid var(--outline);
+  border-radius: 28px;
+  background: #fffaf0;
+  box-shadow: var(--shadow);
+}
+
+.new-comic-dialog::backdrop {
+  background: rgba(29, 27, 32, 0.55);
+}
+
+.new-comic-card {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+}
+
+.dialog-kicker {
+  margin: 0 0 8px;
+  color: var(--accent-strong);
+  font-size: 0.75rem;
+  font-weight: 950;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.layout-picker {
+  display: grid;
+  grid-template-columns: repeat(var(--picker-columns), 1fr);
+  gap: 6px;
+  padding: 10px;
   border: 3px solid var(--outline);
-  border-radius: 14px;
+  border-radius: 18px;
   background: #fff;
+}
+
+.layout-cell {
+  aspect-ratio: 1;
+  min-width: 0;
+  padding: 0;
+  border: 2px solid rgba(24, 24, 24, 0.22);
+  border-radius: 6px;
+  background: #fff5cb;
+  box-shadow: none;
+  font-size: clamp(0.7rem, 2vw, 1.05rem);
+  line-height: 1;
+}
+
+.layout-cell:hover,
+.layout-cell:focus-visible,
+.layout-cell.is-picked {
+  background: var(--accent);
+  border-color: var(--outline);
+  box-shadow: none;
+  transform: none;
+}
+
+.layout-cell.is-corner {
+  background: var(--accent-strong);
+  color: #fff;
+}
+
+.layout-cell:active {
+  box-shadow: none;
+  transform: none;
+}
+
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: flex-end;
 }
 
 .comic-page {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(4, 1fr);
+  grid-template-columns: repeat(var(--comic-columns), 1fr);
+  grid-template-rows: repeat(var(--comic-rows), 1fr);
   gap: 12px;
   width: min(100%, 980px);
   aspect-ratio: 3 / 4;
@@ -408,6 +487,11 @@ button:active {
 
   .toolbar-heading {
     display: none;
+  }
+
+  .qr-link img {
+    width: 84px;
+    height: 84px;
   }
 
   .comic-page {

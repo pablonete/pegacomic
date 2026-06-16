@@ -1,13 +1,14 @@
-const ROWS = 4;
-const COLUMNS = 3;
-const PANEL_COUNT = ROWS * COLUMNS;
+const DEFAULT_ROWS = 4;
+const DEFAULT_COLUMNS = 3;
+const MAX_LAYOUT_ROWS = 10;
+const MAX_LAYOUT_COLUMNS = 6;
 const EXPORT_WIDTH = 1800;
-const EXPORT_HEIGHT = 2400;
 const BUBBLE_FONT = '900 34px "Comic Sans MS", "Comic Neue", "Bradley Hand", cursive';
 const BUBBLE_OUTSIDE_RATIO = 0.4;
 const TAIL_POSITIONS = ["left", "left-top", "right-top", "right", "right-bottom", "left-bottom"];
 const DEFAULT_TAIL_POSITION = "right-bottom";
-const STORAGE_KEY = "pegacomic:bubbles:v1";
+const STORAGE_KEY = "pegacomic:comic:v1";
+const LEGACY_STORAGE_KEY = "pegacomic:bubbles:v1";
 
 function createEmptyPanel() {
   return {
@@ -16,25 +17,43 @@ function createEmptyPanel() {
   };
 }
 
+function createPanels(rows, columns) {
+  return Array.from({ length: rows * columns }, createEmptyPanel);
+}
+
 const state = {
+  rows: DEFAULT_ROWS,
+  columns: DEFAULT_COLUMNS,
   selectedPanelId: 0,
   selectedBubbleId: null,
-  panels: Array.from({ length: PANEL_COUNT }, createEmptyPanel),
+  panels: createPanels(DEFAULT_ROWS, DEFAULT_COLUMNS),
+};
+
+const newComicSelection = {
+  rows: DEFAULT_ROWS,
+  columns: DEFAULT_COLUMNS,
 };
 
 const comicPage = document.querySelector("#comicPage");
+const newButton = document.querySelector("#newButton");
 const uploadButton = document.querySelector("#uploadButton");
 const bubbleButton = document.querySelector("#bubbleButton");
 const exportButton = document.querySelector("#exportButton");
-const clearButton = document.querySelector("#clearButton");
 const deleteBubbleButton = document.querySelector("#deleteBubbleButton");
 const imageInput = document.querySelector("#imageInput");
 const selectionHint = document.querySelector("#selectionHint");
+const newComicDialog = document.querySelector("#newComicDialog");
+const layoutPicker = document.querySelector("#layoutPicker");
+const cancelNewComicButton = document.querySelector("#cancelNewComicButton");
 
-loadStoredBubbles();
+loadStoredComic();
+renderLayoutPicker();
 
 function render() {
   comicPage.innerHTML = "";
+  comicPage.style.setProperty("--comic-columns", state.columns);
+  comicPage.style.setProperty("--comic-rows", state.rows);
+  comicPage.style.aspectRatio = `${state.columns} / ${state.rows}`;
 
   state.panels.forEach((panel, panelIndex) => {
     const panelElement = document.createElement("div");
@@ -247,7 +266,7 @@ function updateBubbleText(bubbleId, text) {
   }
 
   bubble.text = text;
-  saveBubbles();
+  saveComic();
 }
 
 function cycleBubbleTail(bubbleId) {
@@ -259,7 +278,7 @@ function cycleBubbleTail(bubbleId) {
   const currentIndex = TAIL_POSITIONS.indexOf(bubble.tailPosition || DEFAULT_TAIL_POSITION);
   const nextIndex = (currentIndex + 1) % TAIL_POSITIONS.length;
   bubble.tailPosition = TAIL_POSITIONS[nextIndex];
-  saveBubbles();
+  saveComic();
   render();
 }
 
@@ -305,7 +324,7 @@ function addBubble() {
 
   panel.bubbles.push(bubble);
   state.selectedBubbleId = bubble.id;
-  saveBubbles();
+  saveComic();
   render();
 }
 
@@ -319,21 +338,82 @@ function deleteSelectedBubble() {
   });
 
   state.selectedBubbleId = null;
-  saveBubbles();
+  saveComic();
   render();
 }
 
-function clearComic() {
-  const shouldClear = window.confirm("Lose everything and reset the comic? This cannot be undone.");
-  if (!shouldClear) {
-    return;
-  }
-
+function createNewComic(rows, columns) {
+  state.rows = rows;
+  state.columns = columns;
   state.selectedPanelId = 0;
   state.selectedBubbleId = null;
-  state.panels = Array.from({ length: PANEL_COUNT }, createEmptyPanel);
-  localStorage.removeItem(STORAGE_KEY);
+  state.panels = createPanels(rows, columns);
+  saveComic();
   render();
+}
+
+function openNewComicDialog() {
+  newComicSelection.rows = state.rows;
+  newComicSelection.columns = state.columns;
+  renderLayoutPicker();
+  newComicDialog.showModal();
+}
+
+function closeNewComicDialog() {
+  newComicDialog.close();
+}
+
+function renderLayoutPicker() {
+  layoutPicker.innerHTML = "";
+  layoutPicker.style.setProperty("--picker-columns", MAX_LAYOUT_COLUMNS);
+
+  for (let row = 1; row <= MAX_LAYOUT_ROWS; row += 1) {
+    for (let column = 1; column <= MAX_LAYOUT_COLUMNS; column += 1) {
+      const cell = document.createElement("button");
+      cell.className = "layout-cell";
+      cell.type = "button";
+      cell.dataset.row = String(row);
+      cell.dataset.column = String(column);
+      cell.setAttribute("aria-label", `${column} columns by ${row} rows`);
+
+      const updateSelection = () => {
+        newComicSelection.rows = row;
+        newComicSelection.columns = column;
+        updateLayoutPickerSelection();
+      };
+
+      cell.addEventListener("pointerenter", updateSelection);
+      cell.addEventListener("focus", updateSelection);
+      cell.addEventListener("click", () => {
+        updateSelection();
+        createNewComic(row, column);
+        closeNewComicDialog();
+      });
+      layoutPicker.append(cell);
+    }
+  }
+
+  updateLayoutPickerSelection();
+}
+
+function updateLayoutPickerSelection() {
+  layoutPicker.querySelectorAll(".layout-cell").forEach((cell) => {
+    cell.textContent = "";
+
+    const row = Number(cell.dataset.row);
+    const column = Number(cell.dataset.column);
+    const isCorner = row === newComicSelection.rows && column === newComicSelection.columns;
+
+    cell.classList.toggle(
+      "is-picked",
+      row <= newComicSelection.rows && column <= newComicSelection.columns,
+    );
+    cell.classList.toggle("is-corner", isCorner);
+
+    if (isCorner) {
+      cell.textContent = `${newComicSelection.columns}x${newComicSelection.rows}`;
+    }
+  });
 }
 
 function startBubbleDrag(event, bubbleElement, panelIndex, bubbleId) {
@@ -377,7 +457,7 @@ function startBubbleDrag(event, bubbleElement, panelIndex, bubbleId) {
     bubbleElement.removeEventListener("pointermove", moveBubble);
     bubbleElement.removeEventListener("pointerup", stopDragging);
     bubbleElement.removeEventListener("pointercancel", stopDragging);
-    saveBubbles();
+    saveComic();
   };
 
   bubbleElement.addEventListener("pointermove", moveBubble);
@@ -397,7 +477,7 @@ function createId() {
   return `bubble-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function saveBubbles() {
+function saveComic() {
   const savedPanels = state.panels.map((panel) => ({
     bubbles: panel.bubbles.map((bubble) => ({
       id: bubble.id,
@@ -409,27 +489,63 @@ function saveBubbles() {
     })),
   }));
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ panels: savedPanels }));
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({
+      layout: {
+        rows: state.rows,
+        columns: state.columns,
+      },
+      panels: savedPanels,
+    }),
+  );
+  localStorage.removeItem(LEGACY_STORAGE_KEY);
 }
 
-function loadStoredBubbles() {
-  const rawValue = localStorage.getItem(STORAGE_KEY);
+function loadStoredComic() {
+  const rawValue = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
   if (!rawValue) {
     return;
   }
 
-  const savedState = JSON.parse(rawValue);
-  if (!Array.isArray(savedState.panels)) {
-    throw new Error("Stored comic data is invalid.");
+  let savedState;
+  try {
+    savedState = JSON.parse(rawValue);
+  } catch (error) {
+    console.warn("Stored comic data could not be read.", error);
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    return;
   }
 
-  savedState.panels.slice(0, PANEL_COUNT).forEach((savedPanel, panelIndex) => {
+  if (!savedState || typeof savedState !== "object" || !Array.isArray(savedState.panels)) {
+    console.warn("Stored comic data is invalid.");
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(LEGACY_STORAGE_KEY);
+    return;
+  }
+
+  const savedLayout = savedState.layout && typeof savedState.layout === "object"
+    ? savedState.layout
+    : savedState;
+  const rows = Number.isInteger(savedLayout.rows) ? savedLayout.rows : DEFAULT_ROWS;
+  const columns = Number.isInteger(savedLayout.columns) ? savedLayout.columns : DEFAULT_COLUMNS;
+
+  state.rows = clamp(rows, 1, MAX_LAYOUT_ROWS);
+  state.columns = clamp(columns, 1, MAX_LAYOUT_COLUMNS);
+  state.panels = createPanels(state.rows, state.columns);
+
+  savedState.panels.slice(0, state.panels.length).forEach((savedPanel, panelIndex) => {
     if (!Array.isArray(savedPanel?.bubbles)) {
       return;
     }
 
     state.panels[panelIndex].bubbles = savedPanel.bubbles.map(normalizeStoredBubble);
   });
+
+  if (!localStorage.getItem(STORAGE_KEY)) {
+    saveComic();
+  }
 }
 
 function normalizeStoredBubble(bubble) {
@@ -460,7 +576,7 @@ function selectText(element) {
 async function exportComic() {
   const canvas = document.createElement("canvas");
   canvas.width = EXPORT_WIDTH;
-  canvas.height = EXPORT_HEIGHT;
+  canvas.height = Math.round(EXPORT_WIDTH * (state.rows / state.columns));
 
   const context = canvas.getContext("2d");
   if (!context) {
@@ -469,15 +585,15 @@ async function exportComic() {
 
   const pagePadding = 40;
   const pageGap = 24;
-  const panelWidth = (EXPORT_WIDTH - pagePadding * 2 - pageGap * (COLUMNS - 1)) / COLUMNS;
-  const panelHeight = (EXPORT_HEIGHT - pagePadding * 2 - pageGap * (ROWS - 1)) / ROWS;
+  const panelWidth = (canvas.width - pagePadding * 2 - pageGap * (state.columns - 1)) / state.columns;
+  const panelHeight = (canvas.height - pagePadding * 2 - pageGap * (state.rows - 1)) / state.rows;
 
   context.fillStyle = "#ffffff";
-  context.fillRect(0, 0, EXPORT_WIDTH, EXPORT_HEIGHT);
+  context.fillRect(0, 0, canvas.width, canvas.height);
 
   const exportPanels = state.panels.map((panel, index) => {
-    const column = index % COLUMNS;
-    const row = Math.floor(index / COLUMNS);
+    const column = index % state.columns;
+    const row = Math.floor(index / state.columns);
 
     return {
       panel,
@@ -738,10 +854,11 @@ function wait(milliseconds) {
   });
 }
 
+newButton.addEventListener("click", openNewComicDialog);
+cancelNewComicButton.addEventListener("click", closeNewComicDialog);
 uploadButton.addEventListener("click", openImagePicker);
 bubbleButton.addEventListener("click", addBubble);
 deleteBubbleButton.addEventListener("click", deleteSelectedBubble);
-clearButton.addEventListener("click", clearComic);
 exportButton.addEventListener("click", async () => {
   exportButton.disabled = true;
   exportButton.classList.remove("is-exported", "is-export-failed");
