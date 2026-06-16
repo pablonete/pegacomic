@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Pega Comic</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero-panel" aria-labelledby="app-title">
+        <button id="exportButton" class="export-action" type="button">Export</button>
+
+        <div class="title-area">
+          <h1 id="app-title" class="app-title">
+            <img src="assets/pegacomic-title.jpg" alt="PegaComic">
+          </h1>
+        </div>
+
+        <div class="quick-actions" aria-label="Comic actions">
+          <h2 id="selectionHint" class="toolbar-heading">Editing panel 1</h2>
+          <button id="uploadButton" class="primary-action" type="button">Add picture</button>
+          <button id="bubbleButton" type="button">Add text bubble</button>
+          <button id="deleteBubbleButton" class="danger" type="button" hidden>Delete bubble</button>
+        </div>
+      </section>
+
+      <section class="workspace" aria-label="Comic builder">
+        <div class="page-stage">
+          <div id="comicPage" class="comic-page" aria-label="Comic page"></div>
+        </div>
+      </section>
+    </main>
+
+    <input id="imageInput" type="file" accept="image/*" hidden>
+    <script src="app.js"></script>
+  </body>
+</html>
